@@ -1,5 +1,6 @@
 function [BW, THRESH] = edge(IM, varargin)
-    // Wrapper function to mimic Octave's edge() behavior
+
+    // Main wrapper function to detect edges in an image
     [lhs, rhs] = argn(0);
     
     if rhs < 1 then
@@ -18,6 +19,7 @@ function [BW, THRESH] = edge(IM, varargin)
         thresh_val = varargin(2);
     end
 
+    // Run the selected edge detection method
     select METHOD
         case "sobel" then
             if thresh_provided then
@@ -42,15 +44,15 @@ function [BW, THRESH] = edge(IM, varargin)
     end
 endfunction
 
-// ==========================================
-// Edge Thinning (Non-Maximum Suppression)
-// ==========================================
+// Edge Thinning: Make thick edges into thin, 1-pixel wide lines
 function nms = non_max_suppression(mag, Ix, Iy)
     [m, n] = size(mag);
     
     // Calculate angle of the gradient in degrees (0 to 180)
     angle = atan(Iy, Ix) * 180 / %pi;
-    angle(angle < 0) = angle(angle < 0) + 180;
+    if or(angle < 0) then
+        angle(angle < 0) = angle(angle < 0) + 180;
+    end
     
     // Create shifted matrices to look at neighbors
     mag_L  = [zeros(m,1), mag(:, 1:n-1)];
@@ -83,9 +85,7 @@ function nms = non_max_suppression(mag, Ix, Iy)
     nms = mag .* keep;
 endfunction
 
-// ==========================================
-// Custom Convolution
-// ==========================================
+// Apply a math filter (kernel) over the image
 function out = conv2_custom(img, kernel)
     [m, n] = size(img);
     [km, kn] = size(kernel);
@@ -105,9 +105,9 @@ function out = conv2_custom(img, kernel)
     end
 endfunction
 
-// ==========================================
-// Algorithm Implementations
-// ==========================================
+// --- Different Edge Detection Methods ---
+
+// Detect edges using the Sobel method
 function [BW, THRESH] = edge_sobel(IM, thresh)
     IM = double(IM);
     Gx = [-1 0 1; -2 0 2; -1 0 1];
@@ -127,6 +127,7 @@ function [BW, THRESH] = edge_sobel(IM, thresh)
     BW = nms > THRESH;
 endfunction
 
+// Detect edges using the Prewitt method
 function [BW, THRESH] = edge_prewitt(IM, thresh)
     IM = double(IM);
     Gx = [-1 0 1; -1 0 1; -1 0 1];
@@ -146,6 +147,7 @@ function [BW, THRESH] = edge_prewitt(IM, thresh)
     BW = nms > THRESH;
 endfunction
 
+// Detect edges using the Roberts method
 function [BW, THRESH] = edge_roberts(IM, thresh)
     IM = double(IM);
     Gx = [1 0; 0 -1];

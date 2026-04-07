@@ -2,7 +2,9 @@
 
 ## Description
 
-The `entropy` function computes the entropy of an image or array, which is a measure of the randomness or information content in the data. It supports both grayscale and boolean images, and allows for a custom number of histogram bins.
+The `entropy` function computes the Shannon entropy of an image or array. Entropy is a statistical measure of randomness or information content in data. A higher entropy indicates that the image contains more details and varying pixel intensities, while an image with a single uniform color has zero entropy.
+
+This function supports grayscale, color, and boolean images, and allows for a custom number of histogram bins.
 
 ## Calling Sequence
 
@@ -13,71 +15,49 @@ E = entropy(IM, NBINS)
 
 ## Parameters
 
-- **IM**: (matrix)  
-  The input image or array. Can be of any numeric type or boolean. For color images, the function flattens all channels into a single vector.
+- **`IM`**: (matrix)  
+  The input image or array. It can be of any numerical type or boolean. For multi-channel (color) images, the function flattens all channels into a single sequence of pixels.
 
-- **NBINS**: (integer, optional)  
-  The number of bins to use for the histogram.  
+- **`NBINS`**: (integer, optional)  
+  The number of bins to use for the image histogram calculation.  
   - If not specified:  
-    - For boolean images, defaults to 2.  
-    - For other images, defaults to 256.
+    - Defaults to `2` for boolean images.  
+    - Defaults to `256` for other images.
 
 ## Returns
 
-- **E**: (double)  
-  The entropy value of the input image or array.
+- **`E`**: (double)  
+  The calculated entropy value of the input image or array.
 
-## Detailed Explanation
+## Mathematical Formulation
 
-1. **Default Bins**: If `NBINS` is not provided, the function chooses 2 for boolean images and 256 for others.
-2. **Conversion**: The input is converted to double and flattened into a vector.
-3. **Constant Image Handling**: If all pixels have the same value, entropy is 0.
-4. **Binning**: The pixel values are scaled into the range `[0, NBINS-1]` and binned using `floor`.
-5. **Histogram**: A histogram is built by counting occurrences in each bin.
-6. **Probability Calculation**: The histogram is normalized to get probabilities.
-7. **Zero Bin Removal**: Bins with zero probability are removed.
-8. **Entropy Calculation**: Entropy is computed as `-sum(P .* log2(P))`.
+The function calculates the **Shannon Entropy** ($E$). The mathematical formula is:
+
+$$ E = - \sum_{i=1}^{N} P_i \log_2(P_i) $$
+
+Where:
+- $N$ is the total number of bins (`NBINS`).
+- $P_i$ is the probability of a pixel value belonging to the $i^{th}$ bin. The probability is calculated as the frequency of pixels in the bin divided by the total number of pixels.
+
+*Note: If $P_i = 0$, that probability term is ignored since $\lim_{p \rightarrow 0} p \log_2(p) = 0$.*
+
+## Detailed Explanation (How it works & Why)
+
+1. **Default Bins**: If `NBINS` is not provided, the function selects 2 for boolean logic and 256 for standard images. This is because standard image channels usually have values in the range [0, 255].
+2. **Flattening**: The input is first converted to double precision and flattened into a 1D vector. This is done to ensure the function smoothly processes both 2D (grayscale) and 3D (color) arrays without dimension complexities.
+3. **Handling Constant Images**: If all pixels share the identical value, the entropy is immediately evaluated to `0`, representing no randomness.
+4. **Data Scaling**: The pixel values are normalized and mapped into the range `[0, NBINS-1]`. Scaling is crucial to ensure that, irrespective of the initial data boundaries, all values fit perfectly into the provided number of bins. 
+5. **Discretization**: The `floor` function turns the scaled decimals into distinct bins (indices). Boundary conditions are corrected so that edge values perfectly hit valid bins.
+6. **Histogram & Probabilities**: A histogram computes pixel distributions. Then, the histogram counts are divided by the total number of pixels to obtain probabilities ($P_i$).
+7. **Zero Probability Filtering**: Bins with zero counts are excluded from calculation. This is necessary because the logarithm of zero ($\log_2(0)$) is undefined.
+8. **Final Calculation**: Finally, the standard Shannon Entropy formula is applied to obtain the total entropy.
 
 ## Test Cases
 
-### 1. Random Grayscale Image
+The test cases for this function are in the ```test_entropy.sce``` file. You can run it directly in Scilab to verify the functionality by ```exec('test_entropy.sce', -1);```.
 
-```scilab
-img = rand(10, 10); // Random grayscale image
-E = entropy(img);
-disp(E); // Should be close to log2(256) ≈ 8 if NBINS=256
-```
-
-### 2. Constant Image
-
-```scilab
-img = ones(5, 5); // All pixels same
-E = entropy(img);
-disp(E); // Should be 0
-```
-
-### 3. Boolean Image
-
-```scilab
-img = [%T %F %T %F];
-E = entropy(img);
-disp(E); // Should be 1 (if equal number of T/F)
-```
-
-### 4. Custom Number of Bins
-
-```scilab
-img = grand(1, 100, "uin", 0, 9); // 100 random integers 0-9
-E = entropy(img, 10);
-disp(E); // Should be close to log2(10) ≈ 3.32 if uniform
-```
-
-### 5. Color Image
-
-```scilab
-img = rand(5, 5, 3); // Random color image
-E = entropy(img);
-disp(E); // Should return a positive value
-```
-
----
+1. **Random Grayscale Image**: Computes the entropy of a 10x10 array of random values. The output should be close to log₂(256) ≈ 8.
+2. **Constant Image**: Tests an image where all pixel values are exactly the same, verifying that the entropy calculation returns exactly 0.
+3. **Boolean Image**: Tests an array of boolean values (True/False). Entropy should be 1 if True and False are equally distributed.
+4. **Custom Number of Bins**: Evaluates the entropy on an array of random integers using a custom specified bin count (10 bins). Output should be close to log₂(10) ≈ 3.32.
+5. **Color Image**: Tests handling of a 3D (color) array to verify flattening logic.
